@@ -46,7 +46,7 @@ def add_standard_arguments(parser):
     # paths so save/load
     parser.add_argument("-chp", "--checkpoints_path", type=str, default='model_checkpoints/', help="folder where to save the checkpoints")
     parser.add_argument("-ptr", "--pretrained_model_path", default=None, type=str, help="pretrained model path from which to train")
-    parser.add_argument("-r", "--results_path", type=str, default='results.txt', help="file where to save the results")
+    parser.add_argument("-r", "--results_path", type=str, default='results.csv', help="file where to save the results")
 
     # seed
     parser.add_argument("-s", "--seed", type=int, default=42, help="RNG seed. Default: 42.")
@@ -108,6 +108,10 @@ if __name__ == '__main__':
             'patch_size' : 4,
         },
     }
+    args.d_model = size2params[args.model_name]['d_model']
+    args.n_layers = size2params[args.model_name]['n_layers']
+    args.n_heads = size2params[args.model_name]['n_heads']
+    args.patch_size = size2params[args.model_name]['patch_size']
 
     communicators = {
         'normal':LastPass,
@@ -221,7 +225,29 @@ if __name__ == '__main__':
 
     # Write results #################################################################################
     with open(args.results_path, 'a') as fout:
-        fout.write('acc='+str(acc))
         dic = vars(args)
-        for k in sorted(dic.keys()):
-            fout.write(','+str(k)+'='+str(dic[k]))
+        dic['acc'] = acc
+        dic['n_params/M'] = model.get_number_of_parameters()/10**6
+        fout.write(','.join([str(dic[k]) for k in sorted(dic.keys())]) + '\n')
+        # with open('tmp.txt') as fin:
+        #     lines = fin.readlines()[0].strip()
+        #     elements = lines.split(',')
+        #     while len(elements)>0:
+        #         minidic = {k:'nan' for k in dic.keys()}
+        #         curr, elements = elements[:len(dic)], elements[len(dic)+1:]
+        #         for el in curr:
+        #             name, val = el.split('=')
+        #             minidic[name] = val
+
+        #         fout.write(','.join(
+        #             [
+        #                 minidic[k] for k in sorted(dic.keys())
+        #             ]
+        #         )+'\n')
+        #         l = {}
+
+
+
+        # for k in sorted(dic.keys()):
+            # fout.write(','+str(k)+'='+str(dic[k]))
+            # fout.write(','+str(k)+'='+str(dic[k]))
