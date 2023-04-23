@@ -34,7 +34,18 @@ class WeightedPass(Communicator):
     def __init__(self, d_model, n_in, **kwargs):
         super().__init__(d_model, n_in)
         self.weighter = nn.parameter.Parameter(
-            data=torch.tensor([[[1/n_in for _ in range(n_in)]]])
+            data=torch.tensor([[[1.0 if i==n_in-1 else 0.0 for i in range(n_in)]]])
+        )
+
+    def forward(self, prev_outputs:List[torch.Tensor]):
+        prev_outputs = torch.stack(prev_outputs, dim=3)
+        return (prev_outputs * self.weighter).sum(dim=3)
+    
+class FeatureWiseWeightedPass(Communicator):
+    def __init__(self, d_model, n_in, **kwargs):
+        super().__init__(d_model, n_in)
+        self.weighter = nn.parameter.Parameter(
+            data=torch.tensor([[[1.0 if i==n_in-1 else 0.0 for i in range(n_in)] for _ in range(d_model)]])
         )
 
     def forward(self, prev_outputs:List[torch.Tensor]):
@@ -51,6 +62,26 @@ class DensePass(Communicator):
     def forward(self, prev_outputs:List[torch.Tensor]):
         prev_outputs = torch.cat(prev_outputs, dim=-1)
         return self.lin(prev_outputs)
+    
+class BottleneckDensePass(Communicator):
+    def __init__(self, d_model, n_in, bottleneck_ratio=4, **kwargs):
+        '''
+        Parameters are reduces by bottleneck_ratio/2 compared to DensePass
+        '''
+        super().__init__(d_model, n_in)
+
+        self.lin = nn.Linear(d_model//bottleneck_ratio*n_in, d_model)
+        self.bottlenecks = nn.ModuleList([
+            nn.Linear(d_model, d_model//bottleneck_ratio) for _ in range(n_in)
+        ])
+        
+
+    def forward(self, prev_outputs:List[torch.Tensor]):
+        bottlenecked = [
+            bot(prev) for bot, prev in zip(self.bottlenecks, prev_outputs)
+        ]
+        bottlenecked = torch.cat(bottlenecked, dim=-1)
+        return self.lin(bottlenecked)
     
 
 class AttentionPass(Communicator):

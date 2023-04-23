@@ -14,7 +14,7 @@ from transforms import vit_train_transform as train_transform
 from utils import load_model, save_model, seed_everything
 import argparse
 from torch.utils.tensorboard import SummaryWriter
-from communicators import LastPass, WeightedPass, DensePass, AttentionPass
+from communicators import LastPass, WeightedPass, DensePass, AttentionPass, FeatureWiseWeightedPass, BottleneckDensePass
 
 
 
@@ -23,7 +23,7 @@ def add_standard_arguments(parser):
 
     # model parameters
     parser.add_argument("-n", "--model_name", type=str, default='tiny', help="Model size parameters, default 'custom'.")
-    parser.add_argument("-c", "--communicators", type=str, default='normal', choices=['normal', 'weighted', 'dense', 'attention'] ,help="Model size parameters, default 'custom'.")
+    parser.add_argument("-c", "--communicators", type=str, default='normal', choices=['normal', 'weighted', 'dense', 'attention', 'feature_wise_weighted', 'bottlenecked_dense'] ,help="Model size parameters, default 'custom'.")
     parser.add_argument("-d", "--d_model", type=int, default=192, help="Model dimension, default 192.")
     parser.add_argument("-nl", "--n_layers", type=int, default=12, help="Number of layers in the transformer encoder. Default: 12.")
     parser.add_argument("-nh", "--n_heads", type=int, default=12, help="Number of heads in the transformer encoder. Default: 12.")
@@ -117,7 +117,9 @@ if __name__ == '__main__':
         'normal':LastPass,
         'weighted':WeightedPass,
         'dense':DensePass,
-        'attention':AttentionPass
+        'attention':AttentionPass,
+        'feature_wise_weighted':FeatureWiseWeightedPass,
+        'bottlenecked_dense': BottleneckDensePass,
     }[args.communicators]
 
     import pprint

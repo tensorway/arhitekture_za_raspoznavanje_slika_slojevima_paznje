@@ -26,10 +26,12 @@ class VIT(nn.Module):
         '''
         super().__init__()
         if type(layer_communicators) != list:
+            self.classifier_communicator = layer_communicators(d_model, n_layers+1)
             layer_communicators = [layer_communicators]*n_layers
         else:
             assert n_layers is None
             n_layers = len(layer_communicators)
+            self.classifier_communicator = layer_communicators[0](d_model, n_layers+1)
 
         self.layers = nn.ModuleList(
             [
@@ -70,6 +72,7 @@ class VIT(nn.Module):
             x = comm_layer(outputs)
             x = transformer_layer(x)
             outputs.append(x)
+        x = self.classifier_communicator(outputs)
         cls_token = x[:, 0]
         classes = self.classifier(cls_token)
         return torch.softmax(classes, dim=-1)
