@@ -20,7 +20,7 @@ from communicators import LastPass, WeightedPass, DensePass, AttentionPass, Feat
 
 
 
-def get_weighted_matrix(model):
+def get_weighted_matrix(model, name):
     padded_length = len(model.communicators)
     matrix = [
         comm.weighter[0, 0].detach().cpu().numpy().tolist() + [0]*(padded_length-i) 
@@ -29,26 +29,37 @@ def get_weighted_matrix(model):
     matrix = torch.tensor(matrix).numpy().T
     matrix = np.flip(matrix, axis=0)
     matrix = matrix / np.sum(matrix, axis=0, keepdims=True)
+
+    # Create a larger figure
+    fig, ax = plt.subplots(figsize=(12, 6), facecolor='white')
+
     # Plot the matrix
-    plt.imshow(matrix, cmap='Greys', aspect='auto')
+    im = ax.imshow(matrix, cmap='Greys', aspect='auto')
 
     # Add the x-axis label
-    plt.ylabel('what they value most, normalised')
+    ax.set_ylabel('Što im najviše vrijedi?, normalizirano')
     ylen = matrix.shape[0]
-    ticks = ['input'] + [str(i) + ' layer' for i in range(0, ylen-1)]
-    plt.yticks(range(ylen), reversed(ticks))
+    ticks = ['ulaz'] + [str(i) + ' sloj' for i in range(0, ylen-1)]
+    ax.set_yticks(range(ylen))
+    ax.set_yticklabels(reversed(ticks))
 
     # Add the y-axis label
-    plt.xlabel('Layers')
+    ax.set_xlabel('Slojevi')
     xlen = matrix.shape[1]
-    plt.xticks(range(xlen), range(xlen))
+    ax.set_xticks(range(xlen))
+    ax.set_xticklabels(range(xlen))
 
     # Add the title
-    plt.title('How layers weight their inputs')
+    ax.set_title('Kako slojevi ponderiraju svoje ulaze')
 
-    # Display the plot
+    # Add a colorbar
+    cbar = fig.colorbar(im)
+
+    # Save the plot
+    plt.savefig(f'output/weight_matrix_{name}.png', bbox_inches="tight", dpi=300)
     plt.show()
     print(matrix)
+
 
 
 
@@ -63,7 +74,7 @@ if __name__ == '__main__':
     # parse arguments
     device = 'cpu'
     print("using", device)
-    model_name = 'tiny'
+    model_name = 'base'
     communicators = 'weighted'
 
     size2params = {
@@ -113,12 +124,13 @@ if __name__ == '__main__':
     # Load everything #################################################################################
     model_path = 'model_checkpoints/huge_weighted_1679187281.pt'
     model_path = 'model_checkpoints/tiny_weighted_1679172096.pt'
+    model_path = 'model_checkpoints/base_weighted_1679172523.pt'
     communicators = communicators['weighted']
     model = VIT(**size2params[model_name], layer_communicators=communicators, n_heads_communicator=4)
     load_model(model, model_path)
 
     print(f'{model_name} {communicators} has, {model.get_number_of_parameters()/10**6} M parameters')
-    get_weighted_matrix(model)
+    get_weighted_matrix(model, model_name)
 
 
 # %%
@@ -153,8 +165,8 @@ ax.set_title('Točnost po metodi i broju parametara')
 ax.legend()
 
 # Show the plot
+plt.savefig(f'output/accuracy_by_method.png', bbox_inches="tight", dpi=300)
 plt.show()
-plt.savefig(f'output/accuracy_by_method.png')
 
 
 #%%
@@ -162,7 +174,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 min_param = 0
-max_param = 2
+max_param = 10
 
 
 # load the CSV file into a pandas DataFrame
@@ -205,8 +217,8 @@ ax.set_ylabel('CIFAR10 točnost')
 ax.set_title('Točnost po metodi i broju parametara')
     
 # show the plot
-plt.show()
 plt.savefig(f'output/accuracy_by_method_{min_param}-{max_param}M.png')
+plt.show()
 
 
 #%%
