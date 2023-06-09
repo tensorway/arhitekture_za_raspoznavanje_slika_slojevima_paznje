@@ -166,7 +166,7 @@ max_param = 2
 
 
 # load the CSV file into a pandas DataFrame
-df = pd.read_csv('tmp.csv', header=0, skip_blank_lines=True, skipinitialspace=True)
+df = pd.read_csv('nonoise.csv', header=0, skip_blank_lines=True, skipinitialspace=True)
 # print(df)
 
 # set the communicators column as categorical
@@ -270,7 +270,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Read the CSV file
-df = pd.read_csv("tmp.csv")
+df = pd.read_csv("nonoise.csv")
 
 # Trim whitespace from column names
 df.columns = df.columns.str.strip()
@@ -334,17 +334,17 @@ croatian_headers = {
 df = df.rename(columns=croatian_headers)
 
 
-for i in range(2):
-    tdf = df[i*len(df)//1: (i+1)*len(df)//1]
-    # Create a table plot
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.axis("off")
-    table = ax.table(cellText=tdf.values, colLabels=tdf.columns, cellLoc="center", loc="center", colWidths=[0.15]*len(tdf.columns))
-    table.auto_set_font_size(False)
-    table.set_fontsize(9)
-    table.scale(1.2, 2.1)
+tdf = df
+# Create a table plot
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.axis("off")
+table = ax.table(cellText=tdf.values, colLabels=tdf.columns, cellLoc="center", loc="center", colWidths=[0.15]*len(tdf.columns))
+table.auto_set_font_size(False)
+table.set_fontsize(9)
+table.scale(1.2, 2.1)
 
-    # Save the table as an image
-    plt.savefig(f"output/results_table_{i}.png", bbox_inches="tight", dpi=300)
+# Save the table as an image
+plt.savefig(f"output/results_table.png", bbox_inches="tight", dpi=300)
+plt.show()
 
 # %%
