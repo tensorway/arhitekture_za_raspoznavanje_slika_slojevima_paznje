@@ -137,38 +137,52 @@ weighted_data = [(0.208, 0.4574), (1.602, 0.5578), (5.362, 0.6127), (9.509, 0.62
 dense_data = [(0.249, 0.4740), (2.192, 0.5901), (8.240, 0.6384), (14.624, 0.6449), (58.345, 0.6430)]
 
 # Create a new figure
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(10, 6))
 
 # Plot the scatter plot for each group with lines connecting the points
-ax.plot([x[0] for x in normal_data], [x[1] for x in normal_data], 'r-o', label='Normal')
-ax.plot([x[0] for x in weighted_data], [x[1] for x in weighted_data], 'g-o', label='Weighted')
-ax.plot([x[0] for x in dense_data], [x[1] for x in dense_data], 'b-o', label='Dense')
+ax.plot([x[0] for x in normal_data], [x[1] for x in normal_data], 'r-o', label='normal')
+ax.plot([x[0] for x in weighted_data], [x[1] for x in weighted_data], 'g-o', label='s težinama')
+ax.plot([x[0] for x in dense_data], [x[1] for x in dense_data], 'b-o', label='gusti')
 
 # Set the x and y axis labels and the plot title
-ax.set_xlabel('Number of Parameters (M)')
-ax.set_ylabel('CIFAR10 Accuracy')
-ax.set_title('Accuracy by Method and Number of Parameters')
+ax.set_xlabel('Broj parametara (u milijunima)')
+ax.set_ylabel('CIFAR10 točnost')
+ax.set_title('Točnost po metodi i broju parametara')
 
 # Add a legend to the plot
 ax.legend()
 
 # Show the plot
 plt.show()
+plt.savefig(f'output/accuracy_by_method.png')
 
 
 #%%
 import pandas as pd
 import matplotlib.pyplot as plt
 
+min_param = 0
+max_param = 2
+
+
 # load the CSV file into a pandas DataFrame
 df = pd.read_csv('tmp.csv', header=0, skip_blank_lines=True, skipinitialspace=True)
 # print(df)
 
 # set the communicators column as categorical
+df.columns = df.columns.str.strip()
 df['communicators'] = pd.Categorical(df['communicators'])
 
 # initialize the plot
 fig, ax = plt.subplots(figsize=(10, 6))
+
+communicator2name = {
+    'dense':'gusti',
+    'weighted':'s težinama',
+    'normal': 'normal',
+    'feature_wise_weighted': 's težinama po značajkama',
+    'bottlenecked_dense': 'gusti nižeg ranga'
+}
 
 # iterate over the unique communicators
 for communicator in df['communicators'].unique():
@@ -177,19 +191,23 @@ for communicator in df['communicators'].unique():
     # filter the DataFrame for the current communicator
     df_comm = df[df['communicators'] == communicator]
     df_comm = df_comm.sort_values(by='n_params/M', ascending=False)
+    df_comm = df_comm[df_comm['n_params/M'] >= min_param]
+    df_comm = df_comm[df_comm['n_params/M'] <= max_param]
     # plot the model parameters against accuracy, connecting the points with a line
-    ax.plot(df_comm['n_params/M'], df_comm['acc'], label=communicator, marker='o')
+    ax.plot(df_comm['n_params/M'], [float(item) for item in df_comm['acc']], label=communicator2name[communicator.strip()], marker='o')
     
 # add a legend to the plot
 ax.legend()
     
 # add labels and title to the plot
-ax.set_xlabel('Model Parameters (in millions)')
-ax.set_ylabel('Accuracy')
-ax.set_title('Accuracy vs Model Parameters')
+ax.set_xlabel('Broj paramatara (u milijunima)')
+ax.set_ylabel('CIFAR10 točnost')
+ax.set_title('Točnost po metodi i broju parametara')
     
 # show the plot
 plt.show()
+plt.savefig(f'output/accuracy_by_method_{min_param}-{max_param}M.png')
+
 
 #%%
 model_path = 'model_checkpoints/custom_feature_wise_weighted_1682267244.pt'
