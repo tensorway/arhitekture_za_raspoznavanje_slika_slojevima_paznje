@@ -8,6 +8,7 @@ import torch.nn as nn
 from tqdm import tqdm
 from pathlib import Path
 from schedulers import CosineSchedulerWithWarmupStart
+from purenoise import NoiseNotCifar10, LengthCroppedAndShuffledDataset
 from vit import VIT
 from transforms import vit_val_transform as val_transform
 from transforms import vit_train_transform as train_transform
@@ -50,6 +51,13 @@ def add_standard_arguments(parser):
 
     # seed
     parser.add_argument("-s", "--seed", type=int, default=42, help="RNG seed. Default: 42.")
+
+    #noise 
+    parser.add_argument("-dat", "--xdataset", type=str, default='cifar', choices=['cifar', 'noise'], help="which dataset to use, default cifar")
+    parser.add_argument("-no", "--xperc_noise", type=float, default=1.0,  help="which dataset to use, default cifar")
+    parser.add_argument('-ln', '--xlabel_noise', action='store_true')
+    parser.add_argument('-in', '--ximg_noise', action='store_true')
+    parser.add_argument("-dlen", "--ydataset_length", type=float, default=None, help="how big the dataset in perc")
 
 
 
@@ -144,13 +152,24 @@ if __name__ == '__main__':
     print('*'*30)
 
 
-    trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=train_transform)
+    if args.xdataset == 'cifar':
+        trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=train_transform)
+    else:
+        trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=val_transform)
     testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=val_transform)
+
+    perc = args.ydataset_length
+    trainset = LengthCroppedAndShuffledDataset(trainset, length=None if perc is None else int(perc*len(trainset)))
+    testset  = LengthCroppedAndShuffledDataset(testset , length=None if perc is None else int(perc*len(testset)))
+    if args.xdataset == 'noise':
+        trainset = NoiseNotCifar10(perc_noise=args.xperc_noise, cifar=trainset, label_noise=args.xlabel_noise, photo_noise=args.ximg_noise)
+        testset  = NoiseNotCifar10(perc_noise=args.xperc_noise, cifar=testset, label_noise=args.xlabel_noise, photo_noise=args.ximg_noise)
     train_dataloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_size, shuffle=True, num_workers=6)
     valid_dataloader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size, shuffle=False, num_workers=6)
 
 
-    writer = SummaryWriter('tensorboard/'+model_str)
+    # writer = SummaryWriter('tensorboard/'+model_str)
+    writer = SummaryWriter(f'tensorboard/m={args.communicators[0]}__noise={args.xperc_noise}__label_noise={args.xlabel_noise}__img_noise={args.ximg_noise}__dlen={perc}')
     if args.use_scheduler:
         scheduler = CosineSchedulerWithWarmupStart(opt, n_warmup_epochs=args.n_warmup_epochs, n_total_epochs=args.n_total_epochs)
         print('using scheduler')
@@ -221,6 +240,11 @@ if __name__ == '__main__':
             
 
             step += 1
+            # if step >= 9000 and args.xdat != 'cifar':
+            #     save_model(model, os.path.join(args.checkpoints_path, 'noise9000model.pt'))
+            #     save_model(opt, os.path.join(args.checkpoints_path, 'noise9000opt.pt'))
+            #     exit(0)
+
 
     save_model(model, os.path.join(args.checkpoints_path, model_str + '.pt'))
     acc = whole_dataset_eval(ep)

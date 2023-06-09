@@ -17,7 +17,8 @@ class VIT(nn.Module):
             img_size=(32, 32),
             n_classes=10,
             layer_communicators=LastPass,
-            n_heads_communicator=4
+            n_heads_communicator=4,
+            use_classifier_communicator=True
         ):
 
         '''
@@ -25,13 +26,17 @@ class VIT(nn.Module):
             layer_communicators: list of classes or 
         '''
         super().__init__()
+        self.classifier_communicator = lambda x:x[-1]
         if type(layer_communicators) != list:
-            self.classifier_communicator = layer_communicators(d_model, n_layers+1)
+            if use_classifier_communicator:
+                self.classifier_communicator = layer_communicators(d_model, n_layers+1)
             layer_communicators = [layer_communicators]*n_layers
         else:
             assert n_layers is None
             n_layers = len(layer_communicators)
-            self.classifier_communicator = layer_communicators[0](d_model, n_layers+1)
+            if use_classifier_communicator:
+                self.classifier_communicator = layer_communicators[0](d_model, n_layers+1)
+                
 
         self.layers = nn.ModuleList(
             [
